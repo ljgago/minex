@@ -55,6 +55,7 @@ defmodule Minex.Auth.Utils do
   @spec get_canonical_query(keyword()) :: binary()
   def get_canonical_query(query) do
     query
+    |> Map.new(fn {key, value} -> {key, value} end)
     |> URI.encode_query()
   end
 

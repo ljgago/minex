@@ -116,7 +116,7 @@ defmodule Minex.Auth do
 
     # Set the X-Amz-Date
     headers = [
-      {"Host", Minex.Request.get_url(req, :authority)},
+      {"Host", Minex.Request.get_authority(req)},
       {"X-Amz-Date", Utils.datetime_string(datetime)}
       | req.headers
     ]
