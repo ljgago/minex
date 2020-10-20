@@ -2,7 +2,7 @@ defmodule Minex.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @repo_url ""
+  @repo_url "https://github.com/ljgago/minex"
 
   def project do
     [
@@ -32,13 +32,15 @@ defmodule Minex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:tesla, "~> 1.3"},
       {:mint, "~> 1.1"},
       {:castore, "~> 0.1"},
+      {:erlsom, "~> 1.5"},
       {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
-      {:benchee, "~> 1.0", only: :dev}
+      {:benchee, "~> 1.0", only: :dev},
+      {:bypass, "~> 2.0", only: :test}
       # {:observer_cli, "~> 1.5"},
+      #{:tesla, "~> 1.3"},
     ]
   end
 

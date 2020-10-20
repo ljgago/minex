@@ -1,4 +1,4 @@
-defmodule Minex.Auth.Utils do
+defmodule Minex.S3.Auth.Utils do
   @moduledoc false
 
   @spec hash_sha256(data :: String.t()) :: String.t()

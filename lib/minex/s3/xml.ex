@@ -1,4 +1,4 @@
-defmodule Minex.XML do
+defmodule Minex.S3.XML do
   @moduledoc false
 
   # From https://github.com/homanchou/elixir-xml-to-map

@@ -1,4 +1,4 @@
-defmodule Minex.Auth.Const do
+defmodule Minex.S3.Auth.Const do
   @moduledoc false
 
   def sign_v4_algorithm do

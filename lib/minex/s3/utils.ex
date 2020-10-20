@@ -1,8 +1,8 @@
-defmodule Minex.S3Utils do
+defmodule Minex.S3.Utils do
   @moduledoc false
 
-  @type conn :: Minex.Conn.t()
-  @type req :: Minex.Request.t()
+  @type conn :: Minex.S3.Conn.t()
+  @type req :: Minex.S3.Request.t()
 
   @valid_bucket_name ~r/^[A-Za-z0-9][A-Za-z0-9\.\-\_\:]{1,61}[A-Za-z0-9]$/
   @valid_bucket_name_strict ~r/^[a-z0-9][a-z0-9\.\-]{1,61}[a-z0-9]$/
@@ -99,6 +99,26 @@ defmodule Minex.S3Utils do
       "cn-northwest-1"
     ]
     |> Enum.any?(&(&1 == region))
+  end
+
+
+  def calc_hash(data) do
+    :crypto.hash(:sha256, data)
+    |> Base.encode16()
+    |> String.downcase()
+  end
+
+  @spec calc_hash_file(
+          path :: binary(),
+          chunk_size :: pos_integer() | :line
+        ) :: binary()
+  def calc_hash_file(path, chunk_size)
+      when is_binary(path) and (is_integer(chunk_size) or is_atom(chunk_size)) do
+    File.stream!(path, [], chunk_size)
+    |> Enum.reduce(:crypto.hash_init(:sha256), &:crypto.hash_update(&2, &1))
+    |> :crypto.hash_final()
+    |> Base.encode16()
+    |> String.downcase()
   end
 
   # defp ip_addr_match?(addr) do

@@ -1,4 +1,4 @@
-defmodule Minex.Conn do
+defmodule Minex.S3.Conn do
   @moduledoc false
 
   defstruct host: "localhost",
@@ -8,8 +8,6 @@ defmodule Minex.Conn do
             secure: :http,
             region: "us-east-1"
 
-  # auto_discover_region: true,
-  # service: "s3",
   @type t :: %__MODULE__{
           host: String.t(),
           port: pos_integer(),
@@ -17,7 +15,5 @@ defmodule Minex.Conn do
           secret_key: String.t(),
           secure: :https | :http,
           region: String.t()
-          # auto_discover_region: true | false,
-          # service: String.t(),
         }
 end

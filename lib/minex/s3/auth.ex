@@ -1,9 +1,10 @@
-defmodule Minex.Auth do
+defmodule Minex.S3.Auth do
   @moduledoc false
 
-  alias Minex.Auth.{Const, Utils}
+  alias Minex.S3.Auth.{Const, Utils}
+  alias Minex.S3.Request
 
-  @type request :: Minex.Request.t()
+  @type request :: Request.t()
   @type date :: any()
 
   # Task 1: Create a canonical request
@@ -12,7 +13,7 @@ defmodule Minex.Auth do
           ignored_headers :: [binary()],
           hashed_payload :: binary()
         ) :: binary()
-  def get_canonical_request(req, ignored_headers, hashed_payload) do
+  defp get_canonical_request(req, ignored_headers, hashed_payload) do
     [
       req.method,
       "\n",
@@ -37,7 +38,7 @@ defmodule Minex.Auth do
           location :: binary(),
           service_type :: binary()
         ) :: binary()
-  def get_string_to_sign_v4(canonical_request, datetime, location, service_type) do
+  defp get_string_to_sign_v4(canonical_request, datetime, location, service_type) do
     [
       Const.sign_v4_algorithm(),
       "\n",
@@ -57,7 +58,7 @@ defmodule Minex.Auth do
           location :: binary(),
           service_type :: binary()
         ) :: binary()
-  def get_signing_key(secret_key, datetime, location, service_type) do
+  defp get_signing_key(secret_key, datetime, location, service_type) do
     ["AWS4", secret_key]
     |> Utils.hmac_sha256(Utils.date_string(datetime))
     |> Utils.hmac_sha256(location)
@@ -70,7 +71,7 @@ defmodule Minex.Auth do
           signing_key :: binary(),
           string_to_sign :: binary()
         ) :: binary()
-  def get_signature(signing_key, string_to_sign) do
+  defp get_signature(signing_key, string_to_sign) do
     Utils.hmac_sha256(signing_key, string_to_sign)
     |> Utils.bytes_to_hex()
   end
@@ -86,7 +87,7 @@ defmodule Minex.Auth do
     access_key <> "/" <> scope
   end
 
-  def get_hashed_payload(req) do
+  defp get_hashed_payload(req) do
     hashed_payload =
       req.headers
       |> Enum.find_value("", fn {key, value} ->
@@ -116,7 +117,7 @@ defmodule Minex.Auth do
 
     # Set the X-Amz-Date
     headers = [
-      {"Host", Minex.Request.get_authority(req)},
+      {"Host", Request.get_authority(req)},
       {"X-Amz-Date", Utils.datetime_string(datetime)}
       | req.headers
     ]
