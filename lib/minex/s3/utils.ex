@@ -1,8 +1,8 @@
 defmodule Minex.S3.Utils do
   @moduledoc false
 
-  @type conn :: Minex.S3.Conn.t()
-  @type req :: Minex.S3.Request.t()
+  @type conn :: Minex.Conn.t()
+  @type req :: Minex.Request.t()
 
   @valid_bucket_name ~r/^[A-Za-z0-9][A-Za-z0-9\.\-\_\:]{1,61}[A-Za-z0-9]$/
   @valid_bucket_name_strict ~r/^[a-z0-9][a-z0-9\.\-]{1,61}[a-z0-9]$/

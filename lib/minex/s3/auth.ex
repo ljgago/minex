@@ -2,7 +2,7 @@ defmodule Minex.S3.Auth do
   @moduledoc false
 
   alias Minex.S3.Auth.{Const, Utils}
-  alias Minex.S3.Request
+  alias Minex.HTTP.Request
 
   @type request :: Request.t()
   @type date :: any()

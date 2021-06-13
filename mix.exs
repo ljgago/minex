@@ -25,6 +25,7 @@ defmodule Minex.MixProject do
   def application do
     [
       # extra_applications: [:logger], mod: {Minex, []}
+      mod: {Minex.Application, []},
       extra_applications: [:logger, :crypto]
     ]
   end
@@ -32,7 +33,8 @@ defmodule Minex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:mint, "~> 1.1"},
+      {:finch, "~> 0.7"},
+      {:mint, "~> 1.3"},
       {:castore, "~> 0.1"},
       {:erlsom, "~> 1.5"},
       {:credo, "~> 1.4", only: [:dev, :test], runtime: false},

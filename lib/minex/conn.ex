@@ -1,4 +1,4 @@
-defmodule Minex.S3.Conn do
+defmodule Minex.Conn do
   @moduledoc false
 
   defstruct host: "localhost",

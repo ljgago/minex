@@ -2,11 +2,13 @@ defmodule Minex.S3.Options do
   @moduledoc false
 
   defstruct query: [],
-            headers: []
+            headers: [],
+            extra: []
 
   @type t :: %__MODULE__{
           query: [{binary(), binary()}],
-          headers: [{binary(), binary()}]
+          headers: [{binary(), binary()}],
+          extra: keyword()
         }
   @type options :: Minex.S3.Options.t()
 
@@ -21,7 +23,8 @@ defmodule Minex.S3.Options do
 
     %Minex.S3.Options{
       query: query,
-      headers: opts.headers
+      headers: opts.headers,
+      extra: opts.extra
     }
   end
 

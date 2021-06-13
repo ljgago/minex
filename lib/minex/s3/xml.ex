@@ -4,7 +4,7 @@ defmodule Minex.S3.XML do
   # From https://github.com/homanchou/elixir-xml-to-map
   # I changed the code for response with tags with underscore notation
 
-  def xml_to_map(xml) do
+  def to_map(xml) do
     naive_map(xml)
   end
 
