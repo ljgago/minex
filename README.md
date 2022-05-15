@@ -1,7 +1,6 @@
 # Minex
 
-Minex is an unofficial Minio/S3 client SDK for Elixir
-
+Minex is an unofficial MinIO/S3 client SDK for Elixir
 
 ## Work in progress
 
@@ -13,7 +12,7 @@ by adding `minex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:minex, "~> 0.1.0"}
+    {:minex, github: "ljgago/minex"}
   ]
 end
 ```

@@ -14,10 +14,11 @@ defmodule Minex do
   """
   alias Minex.Conn
   alias Minex.S3
-  alias Minex.S3.Options
+  alias Minex.S3.{Options, Parsers}
 
   @type conn :: Conn.t()
   @type options :: Options.t()
+
   @doc """
   Create a new connection with default options.
 
@@ -57,7 +58,7 @@ defmodule Minex do
     conn
     |> S3.make_request(method: "GET")
     |> S3.do_request()
-    |> S3.parse_list_bucket()
+    |> Parsers.parse_list_bucket()
   end
 
   @spec list_buckets!(conn :: conn()) :: any()
@@ -68,78 +69,79 @@ defmodule Minex do
 
   @spec make_bucket(
           conn :: conn(),
-          bucket_name :: binary(),
+          bucket :: binary(),
           opts :: options()
         ) :: {:ok} | {:error, any()}
-  def make_bucket(conn, bucket_name, opts \\ %Options{}) do
+  def make_bucket(conn, bucket, opts \\ %Options{}) do
     conn
     |> S3.make_request(
       method: "PUT",
-      path: ["/", bucket_name] |> IO.iodata_to_binary(),
+      path: build_path(bucket),
       query: opts.query,
       headers: opts.headers
     )
     |> S3.do_request()
-    |> S3.parse_make_bucket()
+    |> Parsers.parse_make_bucket()
   end
 
   @spec remove_bucket(
           conn :: conn(),
-          bucket_name :: binary()
+          bucket :: binary()
         ) :: {:ok} | {:error, any()}
-  def remove_bucket(conn, bucket_name) do
+  def remove_bucket(conn, bucket) do
     conn
-    |> S3.make_request(method: "DELETE", path: ["/", bucket_name] |> IO.iodata_to_binary())
+    |> S3.make_request(method: "DELETE", path: build_path(bucket))
     |> S3.do_request()
-    |> S3.parse_remove_bucket()
+    |> Parsers.parse_remove_bucket()
   end
 
   @spec bucket_exist?(
           conn :: conn(),
-          bucket_name :: binary()
+          bucket :: binary()
         ) :: boolean()
-  def bucket_exist?(conn, bucket_name) do
+  def bucket_exist?(conn, bucket) do
     conn
-    |> S3.make_request(method: "HEAD", path: ["/", bucket_name] |> IO.iodata_to_binary())
+    |> S3.make_request(method: "HEAD", path: build_path(bucket))
     |> S3.do_request()
-    |> S3.parse_bucket_exist()
+    |> Parsers.parse_bucket_exist()
   end
 
   @spec list_objects(
           conn :: conn(),
-          bucket_name :: binary(),
+          bucket :: binary(),
           prefix :: binary(),
           recursive :: boolean(),
           opts :: options()
         ) :: {:ok, list()} | {:error, any()}
-  def list_objects(conn, bucket_name, prefix \\ "", recursive \\ true, opts \\ %Options{}) do
+  def list_objects(conn, bucket, prefix \\ "", recursive \\ true, opts \\ %Options{}) do
     opts = Options.options_list_objects(opts, prefix, recursive)
 
     conn
     |> S3.make_request(
       method: "GET",
-      path: ["/", bucket_name] |> IO.iodata_to_binary(),
+      path: build_path(bucket),
       query: opts.query,
       headers: opts.headers
     )
     |> S3.do_request()
-    |> S3.parse_list_objects()
+    |> Parsers.parse_list_objects()
   end
 
   @spec list_objects_v2(
           conn :: conn(),
-          bucket_name :: binary(),
+          bucket :: binary(),
           prefix :: binary(),
           recursive :: boolean(),
           opts :: options()
         ) :: {:ok, list()} | {:error, any()}
-  def list_objects_v2(conn, bucket_name, prefix \\ "", recursive \\ true, opts \\ %Options{}) do
+  def list_objects_v2(conn, bucket, prefix \\ "", recursive \\ true, opts \\ %Options{}) do
     opts = %Options{
       query: [{"list-type", "2"} | opts.query],
       headers: opts.headers,
       extra: opts.extra
     }
-    list_objects(conn, bucket_name, prefix, recursive, opts)
+
+    list_objects(conn, bucket, prefix, recursive, opts)
   end
 
   # def list_incomplete_uploads(conn, bucket_name, prefix, resursive \\ false) do
@@ -149,74 +151,78 @@ defmodule Minex do
   # Object operations
 
   @spec get_object(
-    conn :: conn(),
-    bucket_name :: binary(),
-    object_name :: binary(),
-    opts :: options()
-  ) :: {:ok, binary()} | {:error, any()}
-  def get_object(conn, bucket_name, object_name, opts \\ %Options{}) do
+          conn :: conn(),
+          bucket :: binary(),
+          object :: binary(),
+          opts :: options()
+        ) :: {:ok, binary()} | {:error, any()}
+  def get_object(conn, bucket, object, opts \\ %Options{}) do
     conn
     |> S3.make_request(
       method: "GET",
-      path: ["/", bucket_name, "/", object_name] |> IO.iodata_to_binary(),
+      path: build_path(bucket, object),
       query: opts.query,
       headers: opts.headers
     )
     |> S3.do_request()
-    |> S3.parse_get_object()
+    |> Parsers.parse_get_object()
   end
 
   @spec fget_object(
-    conn :: conn(),
-    bucket_name :: binary(),
-    object_name :: binary(),
-    file_path :: binary(),
-    opts :: options()
-  ) :: {:ok, binary()} | {:error, any()}
-  def fget_object(conn, bucket_name, object_name, file_path, opts \\ %Options{}) do
+          conn :: conn(),
+          bucket :: binary(),
+          object :: binary(),
+          file_path :: binary(),
+          opts :: options()
+        ) :: {:ok, binary()} | {:error, any()}
+  def fget_object(conn, bucket, object, file_path, opts \\ %Options{}) do
     conn
     |> S3.make_request(
       method: "GET",
-      path: ["/", bucket_name, "/", object_name] |> IO.iodata_to_binary(),
+      path: build_path(bucket, object),
       query: opts.query,
       headers: opts.headers,
       body: ""
     )
-    |> S3.do_request(file_path, :download)
+    |> S3.do_download(file_path)
   end
 
   @spec put_object(
-    conn :: conn(),
-    bucket_name :: binary(),
-    object_name :: binary(),
-    object :: binary(),
-    opts :: options()
-  ) :: {:ok, any()} | {:error, any()}
-  def put_object(conn, bucket_name, object_name, object, opts \\ %Options{}) do
+          conn :: conn(),
+          bucket :: binary(),
+          object :: binary(),
+          data :: binary(),
+          opts :: options()
+        ) :: {:ok, any()} | {:error, any()}
+  def put_object(conn, bucket, object, data, opts \\ %Options{}) do
     conn
     |> S3.make_request(
       method: "PUT",
-      path: ["/", bucket_name, "/", object_name] |> IO.iodata_to_binary(),
+      path: build_path(bucket, object),
       query: opts.query,
       headers: opts.headers,
-      body: object
+      body: data
     )
     |> S3.do_request()
   end
 
-  # @spec fput_object(
-  #   conn :: conn(),
-  #   bucket_name :: binary(),
-  #   object_name :: binary(),
-  #   file_path :: binary(),
-  #   opts :: options()
-  # ) :: {:ok, any()} | {:error, any()}
-  # def fput_object(conn, bucket_name, object_name, file_path, opts \\ %Options{}) do
-  #   # File.stream!(file_path, [], opts.extra[:chunk_size] || 5 * 1024 * 1024)
-  #   # |> Enum.each(fn chunk ->
-      
-  #   # end)
-  #   {:ok, ""}
-  # end
+  @spec fput_object(
+          conn :: conn(),
+          bucket :: binary(),
+          object :: binary(),
+          file_path :: binary(),
+          opts :: options()
+        ) :: {:ok, pid, atom()} | {:error, any()}
+  def fput_object(conn, bucket, object, file_path, opts \\ %Options{}) do
+    case S3.get_upload_mode(file_path) do
+      :normal -> S3.do_normal_upload(conn, bucket, object, file_path, opts)
+      :multipart -> S3.do_multipart_upload(conn, bucket, object, file_path, opts)
+    end
+  end
 
+  defp build_path(bucket),
+    do: ["/", bucket] |> IO.iodata_to_binary()
+
+  defp build_path(bucket, object),
+    do: ["/", bucket, "/", object] |> IO.iodata_to_binary()
 end

@@ -25,33 +25,37 @@ defmodule Minex.S3.Utils do
   end
 
   def check_bucket_name(bucket_name, strict \\ false) do
-    cond do
-      String.trim(bucket_name) == "" ->
-        {:error, "Bucket name cannot be empty"}
+    invalid_bucket_name? =
+      Enum.reduce(["..", ".-", "-."], false, fn str, acc ->
+        String.contains?(bucket_name, str) or acc
+      end)
 
-      String.length(bucket_name) < 3 ->
-        {:error, "Bucket name cannot be shorter than 3 characters"}
+    invalid_bucket_name? =
+      if strict do
+        !String.match?(bucket_name, @valid_bucket_name_strict) or invalid_bucket_name?
+      else
+        !String.match?(bucket_name, @valid_bucket_name) or invalid_bucket_name?
+      end
 
-      String.length(bucket_name) > 63 ->
-        {:error, "Bucket name cannot be longer than 63 characters"}
+      cond do
+        String.trim(bucket_name) == "" ->
+          {:error, "Bucket name cannot be empty"}
 
-      String.match?(bucket_name, @ip_address) ->
-        {:error, "Bucket name cannot be an ip address"}
+        String.length(bucket_name) < 3 ->
+          {:error, "Bucket name cannot be shorter than 3 characters"}
 
-      String.contains?(bucket_name, "..") ||
-        String.contains?(bucket_name, ".-") ||
-          String.contains?(bucket_name, "-.") ->
-        {:error, "Bucket name contains invalid characters"}
+        String.length(bucket_name) > 63 ->
+          {:error, "Bucket name cannot be longer than 63 characters"}
 
-      String.match?(bucket_name, @valid_bucket_name_strict) == false and strict ->
-        {:error, "Bucket name contains invalid characters"}
+        String.match?(bucket_name, @ip_address) ->
+          {:error, "Bucket name cannot be an ip address"}
 
-      String.match?(bucket_name, @valid_bucket_name) == false ->
-        {:error, "Bucket name contains invalid characters"}
+        invalid_bucket_name? ->
+          {:error, "Bucket name contains invalid characters"}
 
-      true ->
-        {:ok}
-    end
+        true ->
+          {:ok}
+      end
   end
 
   def from_amazon?(host) do
@@ -100,7 +104,6 @@ defmodule Minex.S3.Utils do
     ]
     |> Enum.any?(&(&1 == region))
   end
-
 
   def calc_hash(data) do
     :crypto.hash(:sha256, data)

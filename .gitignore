@@ -31,4 +31,7 @@ minex-*.tar
 # Ignore elixir formater
 /.formatter.exs
 
+# Ignore ElixirLS
+/.elixir_ls
+
 /ignore

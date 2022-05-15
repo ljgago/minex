@@ -38,12 +38,13 @@ defmodule Minex.HTTP.Request do
   # @method_to_atom Enum.zip(@methods, @atom_methods) |> Enum.into(%{})
   # defp build_method(method) when is_atom(method), do: method
   # defp build_method(method) when method in @methods, do: @method_to_atom[method]
-  
+
   @atom_to_method Enum.zip(@atom_methods, @methods) |> Enum.into(%{})
+
   defp build_method(method) when is_binary(method), do: method
   defp build_method(method) when method in @atom_methods, do: @atom_to_method[method]
 
-  def get_authority(%{host: host, port: port}) when port == 80 or port == 443, do: host
+  def get_authority(%{host: host, port: port}) when port == 80 or port == 443 or port == nil, do: host
   def get_authority(%{host: host, port: port}), do: "#{host}:#{port}"
 
   def get_host(%{host: host}), do: host

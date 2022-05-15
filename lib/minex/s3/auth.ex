@@ -5,7 +5,7 @@ defmodule Minex.S3.Auth do
   alias Minex.HTTP.Request
 
   @type request :: Request.t()
-  @type date :: any()
+  @type date :: DateTime.t()
 
   # Task 1: Create a canonical request
   @spec get_canonical_request(
@@ -13,17 +13,16 @@ defmodule Minex.S3.Auth do
           ignored_headers :: [binary()],
           hashed_payload :: binary()
         ) :: binary()
-  defp get_canonical_request(req, ignored_headers, hashed_payload) do
+  def get_canonical_request(req, ignored_headers, hashed_payload) do
     [
       req.method,
       "\n",
-      Utils.get_canonical_uri(req.path),
+      Utils.get_canonical_data(req, :uri),
       "\n",
-      Utils.get_canonical_query(req.query),
+      Utils.get_canonical_data(req, :query),
       "\n",
-      Utils.get_canonical_headers(req, ignored_headers),
-      "\n",
-      "\n",
+      Utils.get_canonical_data(req, :headers, ignored_headers),
+      "\n\n",
       Utils.get_signed_headers(req, ignored_headers),
       "\n",
       hashed_payload
@@ -38,7 +37,7 @@ defmodule Minex.S3.Auth do
           location :: binary(),
           service_type :: binary()
         ) :: binary()
-  defp get_string_to_sign_v4(canonical_request, datetime, location, service_type) do
+  def get_string_to_sign_v4(canonical_request, datetime, location, service_type) do
     [
       Const.sign_v4_algorithm(),
       "\n",
@@ -58,7 +57,7 @@ defmodule Minex.S3.Auth do
           location :: binary(),
           service_type :: binary()
         ) :: binary()
-  defp get_signing_key(secret_key, datetime, location, service_type) do
+  def get_signing_key(secret_key, datetime, location, service_type) do
     ["AWS4", secret_key]
     |> Utils.hmac_sha256(Utils.date_string(datetime))
     |> Utils.hmac_sha256(location)
@@ -71,7 +70,7 @@ defmodule Minex.S3.Auth do
           signing_key :: binary(),
           string_to_sign :: binary()
         ) :: binary()
-  defp get_signature(signing_key, string_to_sign) do
+  def get_signature(signing_key, string_to_sign) do
     Utils.hmac_sha256(signing_key, string_to_sign)
     |> Utils.bytes_to_hex()
   end
@@ -87,61 +86,37 @@ defmodule Minex.S3.Auth do
     access_key <> "/" <> scope
   end
 
-  defp get_hashed_payload(req) do
-    hashed_payload =
-      req.headers
-      |> Enum.find_value("", fn {key, value} ->
-        if String.downcase(key) == "x-amz-content-sha256" do
-          value
-        end
-      end)
-
-    case hashed_payload do
-      "" -> Const.unsigned_payload()
-      _ -> hashed_payload
-    end
-  end
-
   @spec sign_v4(
           req :: request(),
           access_key :: binary(),
           secret_key :: binary(),
           session_token :: binary(),
           location :: binary(),
-          service_type :: binary()
+          service_type :: binary(),
+          datetime :: date()
         ) :: request()
-  def sign_v4(req, access_key, secret_key, session_token, location, service_type)
+  def sign_v4(req, access_key, secret_key, session_token, location, service_type, datetime)
       when access_key != "" or secret_key != "" do
-    # Initial time
-    datetime = DateTime.utc_now()
 
-    # Set the X-Amz-Date
-    headers = [
-      {"Host", Request.get_authority(req)},
-      {"X-Amz-Date", Utils.datetime_string(datetime)}
-      | req.headers
-    ]
+    # Get the hashed payload
+    hashed_payload = Utils.get_hashed_payload(req)
 
-    # Set session token if available.
+    # Pre-process headers
     headers =
-      case session_token do
-        "" -> headers
-        _ -> [{"X-Amz-Security-Token", session_token} | headers]
-      end
+      req.headers
+      # Remove if these headers exist and set them with the correct values
+      |> Utils.remove_headers(["authorization", "host", "x-amz-date"])
+      |> Utils.set_headers_host_date(req, datetime)
+      # Set session token if available.
+      |> Utils.set_session_token(session_token)
+      # Add the x-amz-content-sha256 header
+      |> Utils.set_hashed_payload(hashed_payload)
+      # Check if the aws service is a Security Token Service
+      |> Utils.check_service_sts(service_type)
+      # Normalize and merge headers
+      |> Utils.merge_headers()
 
-    # Get the payload from header
-    hashed_payload = get_hashed_payload(req)
-
-    headers =
-      if service_type == Const.service_type_sts() do
-        # Content sha256 header is not sent with the request
-        # but it is expected to have sha256 of payload for signature
-        # in STS service type request.
-        Utils.remove_headers(headers, ["x-amz-content-sha256"])
-      else
-        headers
-      end
-
+    # Insert the headers in the requets
     req = req |> Map.replace!(:headers, headers)
 
     # Task 1: Get a canonical request
@@ -166,7 +141,8 @@ defmodule Minex.S3.Auth do
     auth =
       [
         Const.sign_v4_algorithm(),
-        " Credential=",
+        " ",
+        "Credential=",
         credential,
         ",",
         "SignedHeaders=",
@@ -178,6 +154,78 @@ defmodule Minex.S3.Auth do
       |> IO.iodata_to_binary()
 
     headers = [{"Authorization", auth} | headers]
-    req |> Map.replace!(:headers, headers)
+    struct(req, %{headers: headers})
   end
+
+
+  # Stream chunk sign
+
+  # Task 1:
+  # def build_seed_sign() do
+
+  # end
+
+  # def get_content_length(data_size, signature) do
+
+  # end
+
+
+  # def build_chunk_string_to_sign(chunk_data, datetime, location, access_key, previous_signature) do
+
+  # end
+
+  # def sign_chunk() do
+
+  # end
+
+  # def build_chunk_signature(chunk_data, datetime, location, previous_signature, secret_key) do
+
+  # end
+
+  # # string(IntHexBase(chunk-size)) + ";chunk-signature=" + signature + \r\n + chunk-data + \r\n
+  # def build_chunk_header(chunk_size, signature) do
+  #   [
+  #     Integer.to_string(chunk_size, 16),
+  #     ";chunk-signature=",
+  #     signature,
+  #     "\r\n"
+  #   ]
+  #   |> IO.iodata_to_binary()
+  # end
+
+  # @spec sign_multiple_chunk_v4(
+  #         req :: request(),
+  #         access_key :: binary(),
+  #         secret_key :: binary(),
+  #         session_token :: binary(),
+  #         location :: binary(),
+  #         service_type :: binary(),
+  #         datetime :: date(),
+  #         data_size :: number()
+  #       ) :: request()
+  # def sign_multiple_chunk_v4(req, access_key, secret_key, session_token, location, service_type, datetime, data_size)
+  #     when access_key != "" or secret_key != "" do
+
+  #   # Get the hashed payload
+  #   hashed_payload = Utils.get_hashed_payload(req)
+
+  #   # Pre-process headers
+  #   headers =
+  #     req.headers
+  #     # Remove if these headers exist and set them with the correct values
+  #     |> Utils.remove_headers(["authorization", "host", "x-amz-date"])
+  #     |> Utils.set_headers_host_date(req, datetime)
+  #     # Set session token if available.
+  #     |> Utils.set_session_token(session_token)
+  #     # Add the x-amz-content-sha256 header
+  #     |> Utils.set_hashed_payload(hashed_payload)
+  #     # Check if the aws service is a Security Token Service
+  #     |> Utils.check_service_sts(service_type)
+  #     # Normalize and merge headers
+  #     |> Utils.merge_headers()
+
+  #   # Insert the headers in the requets
+  #   req = req |> Map.replace!(:headers, headers)
+  # end
+
 end

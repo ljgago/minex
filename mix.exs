@@ -8,7 +8,7 @@ defmodule Minex.MixProject do
     [
       app: :minex,
       version: @version,
-      elixir: "~> 1.10",
+      elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
 
@@ -17,7 +17,7 @@ defmodule Minex.MixProject do
 
       # Pakcage
       package: package(),
-      description: "Elixir MinIO client"
+      description: "Unofficial Elixir MinIO/S3 client"
     ]
   end
 
@@ -33,16 +33,14 @@ defmodule Minex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:finch, "~> 0.7"},
-      {:mint, "~> 1.3"},
+      {:finch, "~> 0.12"},
+      {:mint, "~> 1.4"},
       {:castore, "~> 0.1"},
       {:erlsom, "~> 1.5"},
-      {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
-      {:benchee, "~> 1.0", only: :dev},
-      {:bypass, "~> 2.0", only: :test}
-      # {:observer_cli, "~> 1.5"},
-      #{:tesla, "~> 1.3"},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.1", only: [:dev], runtime: false},
+      {:benchee, "~> 1.1", only: :dev},
+      {:bypass, "~> 2.1", only: :test}
     ]
   end
 
